@@ -188,10 +188,11 @@
 
         const prompt = `Você é um assistente técnico especializado em artigos científicos. Leia o abstract abaixo e produza um resumo em português claro e bem estruturado. 
 Inclua:
-- O objetivo principal do artigo
-- As metodologias e técnicas utilizadas (quando mencionadas)
-- Os principais resultados e conclusões
-- Qualquer conceito técnico ou palavra-chave relevante
+1. O objetivo principal do artigo
+2. As metodologias e técnicas utilizadas (quando mencionadas)
+3. Os principais resultados e conclusões
+4. Qualquer conceito técnico ou palavra-chave relevante
+Não omita informações importantes, mesmo que o resumo fique um pouco mais longo.
 
 Abstract:\n${abstract}`;
 
@@ -246,7 +247,12 @@ Abstract:\n${abstract}`;
         if (abstracts.length < 2) throw new Error("Não foi possível obter dois resumos válidos.");
 
         toggleLoading(true, "Enviando para Gemini...");
-        let prompt = `Compare e relacione os seguintes artigos científicos em português, destacando:\n1. Objetivos principais\n2. Metodologias\n3. Conclusões\n4. Similaridades e diferenças\n5. Sinergias ou contradições\n\n`;
+        let prompt = `Compare e relacione os seguintes artigos científicos em português, destacando:
+        1. Objetivos principais
+        2. Metodologias
+        3. Conclusões
+        4. Conceitos abordados
+        5. Similaridades`;
 
         abstracts.forEach((a, i) => {
           prompt += `Artigo ${i + 1} (DOI: ${a.doi}):\n${a.abstract}\n\n`;
