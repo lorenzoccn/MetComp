@@ -10,8 +10,9 @@
     #mensagem { margin-top: 10px; color: red; font-weight: bold; }
     .doi-container { width: 100%; margin-bottom: 10px; }
     .doi-input { width: calc(100% - 40px); }
-    .add-doi-btn { width: 30px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
-    .remove-doi-btn { width: 30px; background-color: #f44336; color: white; border: none; cursor: pointer; }
+    .add-doi-btn, .remove-doi-btn { width: 30px; color: white; border: none; cursor: pointer; }
+    .add-doi-btn { background-color: #4CAF50; }
+    .remove-doi-btn { background-color: #f44336; }
     .tab { overflow: hidden; border: 1px solid #ccc; background-color: #f1f1f1; border-radius: 5px 5px 0 0; }
     .tab button { background-color: inherit; float: left; border: none; outline: none; cursor: pointer; padding: 10px 16px; transition: 0.3s; width: auto; }
     .tab button:hover { background-color: #ddd; }
@@ -21,9 +22,31 @@
     #loadingIndicator { display: none; margin: 10px 0; }
     .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 2s linear infinite; margin: 10px auto; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Modal */
+    #apiKeyModal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background-color: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    #modalContent {
+      background: white; padding: 20px; border-radius: 10px; text-align: center; max-width: 400px; width: 90%;
+    }
+    #modalContent input { width: 90%; padding: 8px; margin-top: 10px; }
   </style>
 </head>
 <body>
+  <!-- Modal para chave da API -->
+  <div id="apiKeyModal">
+    <div id="modalContent">
+      <h3>Insira sua chave da API Gemini</h3>
+      <p>Esse programa necessita de uma chave API do Germini para funcionar, você pode obter uma gratuitamente atráves do site: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a>. <br><br>Por segurança, essa chave não é salva, então se a página for fechada você terá que informa-la novamente.<p>
+      <input type="text" id="apiKeyInput" placeholder="Cole sua chave aqui..." />
+      <br>
+      <button onclick="salvarApiKey()">Salvar e continuar</button>
+    </div>
+  </div>
+
   <h2 style="text-align: center;">Resumo de Artigo(s)</h2>
 
   <div class="tab">
@@ -56,8 +79,32 @@
   <h3>Resultado:</h3>
   <textarea id="resumo" rows="15" readonly style="width: 100%;"></textarea>
 
+  <footer style="margin-top: 40px; padding-top: 10px; border-top: 1px solid #ccc; text-align: center; font-size: 0.9em; color: #555;">
+    Desenvolvido por: <strong>Lorenzo Chaves</strong><br>
+    Disciplina: <strong>FIS01248 - Métodos Computacionais Aplicados à Biocomplexidade</strong><br>
+    Prof. Dr.: <strong>Daniel Gamermann</strong>
+  </footer>
+
   <script>
-    const API_KEY = "AIzaSyCBYOb_O2JOk0fY9K7A6y9ERfmtLNebqyw"; // <-- SUBSTITUA pela sua chave da API Gemini
+    let API_KEY = sessionStorage.getItem("gemini_api_key");
+
+    function salvarApiKey() {
+      const input = document.getElementById("apiKeyInput");
+      const key = input.value.trim();
+      if (!key) return alert("Por favor, insira uma chave válida.");
+      sessionStorage.setItem("gemini_api_key", key);
+      API_KEY = key;
+      document.getElementById("apiKeyModal").style.display = "none";
+    }
+
+    window.onload = () => {
+      if (!API_KEY) {
+        document.getElementById("apiKeyModal").style.display = "flex";
+      } else {
+        document.getElementById("apiKeyModal").style.display = "none";
+      }
+      moveAddButtonToBottom();
+    };
 
     function openTab(evt, tabName) {
       const tabcontent = document.getElementsByClassName("tabcontent");
@@ -85,7 +132,7 @@
       const removeBtn = document.createElement("button");
       removeBtn.className = "remove-doi-btn";
       removeBtn.textContent = "-";
-      removeBtn.onclick = function() {
+      removeBtn.onclick = function () {
         container.removeChild(newDoiDiv);
       };
 
@@ -140,23 +187,18 @@
         toggleLoading(true, "Resumindo com Gemini...");
 
         const prompt = `Você é um assistente técnico especializado em artigos científicos. Leia o abstract abaixo e produza um resumo em português claro e bem estruturado. 
-
-	Inclua:
-	- O objetivo principal do artigo
+Inclua:
+- O objetivo principal do artigo
 - As metodologias e técnicas utilizadas (quando mencionadas)
 - Os principais resultados e conclusões
 - Qualquer conceito técnico ou palavra-chave relevante
-
-Não omita informações importantes, mesmo que o resumo fique um pouco mais longo.
 
 Abstract:\n${abstract}`;
 
         const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          })
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
 
         if (!geminiResponse.ok) throw new Error("Erro da API Gemini: " + await geminiResponse.text());
@@ -179,7 +221,6 @@ Abstract:\n${abstract}`;
       const doiInputs = document.querySelectorAll(".multiple-doi");
       const resumoBox = document.getElementById("resumo");
       const mensagem = document.getElementById("mensagem");
-
       resumoBox.value = "";
       mensagem.textContent = "";
       mensagem.style.color = "red";
@@ -214,9 +255,7 @@ Abstract:\n${abstract}`;
         const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          })
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
 
         if (!geminiResponse.ok) throw new Error("Erro da API Gemini: " + await geminiResponse.text());
@@ -226,8 +265,8 @@ Abstract:\n${abstract}`;
         if (!resumo) throw new Error("Falha ao gerar análise.");
 
         resumoBox.value = resumo.trim();
-        mensagem.textContent = usadoFallback ? 
-          "Análise gerada (com fallback em alguns artigos)." : 
+        mensagem.textContent = usadoFallback ?
+          "Análise gerada (com fallback em alguns artigos)." :
           "Análise comparativa gerada com sucesso!";
         mensagem.style.color = usadoFallback ? "orange" : "green";
       } catch (erro) {
@@ -237,13 +276,6 @@ Abstract:\n${abstract}`;
         toggleLoading(false);
       }
     }
-
-    document.addEventListener("DOMContentLoaded", moveAddButtonToBottom);
   </script>
-    <footer style="margin-top: 40px; padding-top: 10px; border-top: 1px solid #ccc; text-align: center; font-size: 0.9em; color: #555;">
-    Desenvolvido por: <strong>Lorenzo Chaves</strong><br>
-    Disciplina: <strong>FIS01248 - Métodos Computacionais Aplicados à Biocomplexidade</strong><br>
-    Prof. Dr.: <strong>Daniel Gamermann</strong>
-  </footer>
 </body>
 </html>
